@@ -1,4 +1,4 @@
-﻿# Secrets and Local Environment
+# Secrets and Local Environment
 .dev.vars
 .dev.vars.*
 .env
@@ -18,3 +18,4 @@ node_modules/
 Thumbs.db
 scripts/*.cjs
 *.log
+graphify-out/

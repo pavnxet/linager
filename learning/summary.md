@@ -18,3 +18,4 @@
 - Re-deployed updated worker to Cloudflare (`https://linager.pavneet1804.workers.dev`) and verified live challenge issuing and cookie response.
 - Resolved browser console `SyntaxError: Unexpected token '&'` in `src/ui.html` by properly quoting HTML entity replacements in `escapeHtml` and `exportLinks`. Re-deployed worker version `f12f2b9f-1cd7-4bdf-a65c-788208df3d1d`. Verified live HTML.
 - Fixed signed challenge token parsing in `verifySignedChallengeToken`: replaced `.split(':')` on JSON payload with `.lastIndexOf(':')` so colons in user ID and challenge strings don't corrupt timestamp calculation. Deployed version `58a97c5b-5719-44bf-94a0-50b81dda9426`.
+- Security sanitized repository: Created `.gitignore` excluding `.dev.vars`, `.env*`, `.wrangler/`, and `node_modules/`. Parameterized `scripts/init-db.mjs` with `process.env.TURSO_AUTH_TOKEN`. Cleaned up scratch scripts. Initialized Git repo and pushed to GitHub: `https://github.com/pavnxet/linager`.

@@ -1,0 +1,22 @@
+{
+  "name": "linager",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Minimalist link manager on Cloudflare Workers with Turso DB & Passkeys",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "node scripts/init-db.mjs"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "@simplewebauthn/browser": "^10.0.0",
+    "@simplewebauthn/server": "^10.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.101.0"
+  }
+}

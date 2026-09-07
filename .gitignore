@@ -1,0 +1,20 @@
+﻿# Secrets and Local Environment
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+*.env
+*.pem
+*.key
+
+# Cloudflare Wrangler
+.wrangler/
+
+# Dependencies
+node_modules/
+
+# OS and Scratch Files
+.DS_Store
+Thumbs.db
+scripts/*.cjs
+*.log

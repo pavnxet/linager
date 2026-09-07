@@ -1,0 +1,10 @@
+{
+  "name": "linager",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "TURSO_DATABASE_URL": "https://linager-qijubevadi.turso.io",
+    "APP_NAME": "Linager"
+  }
+}

@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+<meta charset=utf-8/>
+<meta name=viewport content=width=device-width, initial-scale=1.0/>
+<title>Linager — Link Manager</title>
+<link rel=icon href=data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔗</text></svg>>
+<script src="https://unpkg.com/@simplewebauthn/browser@10.0.0/dist/bundle/index.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --danger: #f85149;
+  --success: #3fb950;
+  --pin: #e3b341;
+  --font: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 16px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.5px;
+}
+.logo span {
+  font-size: 11px;
+  background: #21262d;
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}
+.user-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+button, .btn {
+  background: #21262d;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+button:hover, .btn:hover { background: #30363d; border-color: #8b949e; color: #fff; }
+button.primary, .btn.primary { background: #238636; border-color: #2ea043; color: #fff; }
+button.primary:hover { background: #2ea043; }
+button.danger:hover { background: #b62324; border-color: #f85149; color: #fff; }
+input, select, textarea {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-box {
+  flex: 1;
+  min-width: 220px;
+  position: relative;
+}
+.search-box input {
+  padding-right: 32px;
+}
+.search-box .key-hint {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: #21262d;
+  border: 1px solid var(--border);
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+.filter-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.filter-tab.active {
+  background: #21262d;
+  color: #fff;
+}
+.tags-cloud {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+.tag-badge {
+  background: #161b22;
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.tag-badge:hover, .tag-badge.active {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+  background: #0d1a2d;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.link-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+.link-item:hover {
+  border-color: #484f58;
+}
+.link-item.pinned {
+  border-left: 3px solid var(--pin);
+}
+.link-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.link-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.link-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+}
+.link-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.link-url {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 550px;
+}
+.link-desc {
+  color: var(--text);
+  font-size: 13px;
+}
+.link-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 4px;
+}
+.link-actions {
+  display: flex;
+  gap: 4px;
+}
+.action-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.action-icon-btn:hover {
+  background: #21262d;
+  color: #fff;
+}
+.action-icon-btn.pinned {
+  color: var(--pin);
+}
+.auth-box {
+  max-width: 380px;
+  margin: 60px auto;
+  text-align: center;
+}
+.auth-box h2 {
+  color: #fff;
+  margin-bottom: 8px;
+}
+.auth-box p {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.form-group {
+  margin-bottom: 12px;
+  text-align: left;
+}
+.form-group label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+}
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.hidden { display: none !important; }
+.click-badge {
+  font-family: var(--mono);
+  background: #21262d;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #21262d;
+  border: 1px solid var(--border);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 1000;
+  transition: opacity 0.3s;
+}
+</style>
+</head>
+<body>
+
+<header id=app-header class=hidden>
+  <div class=logo>
+    <span>🔗</span> Linager
+  </div>
+  <div class=user-bar>
+    <span id=user-display style=color:var(--text-muted); font-size:12px;></span>
+    <button id=btn-export onclick=exportLinks()>Export</button>
+    <button id=btn-logout onclick=logout()>Logout</button>
+  </div>
+</header>
+
+<!-- Auth View -->
+<div id=view-auth class=auth-box card>
+  <div style=font-size:40px; margin-bottom:12px;>🔑</div>
+  <h2>Linager</h2>
+  <p>Passwordless edge link manager with Passkey</p>
+  <div class=form-group>
+    <label for=username>Username</label>
+    <input type=text id=username placeholder=alice autocomplete=username webauthn />
+  </div>
+  <div style=display:flex; gap:8px; margin-top:16px;>
+    <button class=primary style=flex:1; justify-content:center; onclick=loginPasskey()>Sign In</button>
+    <button style=flex:1; justify-content:center; onclick=registerPasskey()>Register</button>
+  </div>
+  <p id=auth-status style=margin-top:12px; font-size:12px; color:var(--text-muted);></p>
+</div>
+
+<!-- Main App View -->
+<div id=view-app class=hidden>
+  <!-- Add Link Form -->
+  <div class=card id=add-card>
+    <form id=link-form onsubmit=saveLink(event)>
+      <div style=display:flex; gap:8px; flex-wrap:wrap;>
+        <input type=url id=link-url placeholder=https://example.com/article required style=flex:2; min-width:200px; />
+        <input type=text id=link-title placeholder=Title (optional, auto-detected) style=flex:1.5; min-width:160px; />
+        <input type=text id=link-tags placeholder=tags (e.g. dev, rust, article) style=flex:1; min-width:140px; />
+        <button type=submit class=primary id=btn-save-link>+ Add Link</button>
+      </div>
+      <div id=edit-indicator class=hidden style=margin-top:8px; font-size:12px; color:var(--accent);>
+        Editing link: <span id=edit-id></span> | <a href=# onclick=cancelEdit() style=color:var(--danger)>Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Toolbar & Filters -->
+  <div class=toolbar>
+    <div class=search-box>
+      <input type=text id=search-input placeholder=Search saved links... oninput=handleSearch() />
+      <span class=key-hint>/</span>
+    </div>
+    <div class=filter-tabs>
+      <button class=filter-tab active data-filter=all onclick=setFilter('all')>All</button>
+      <button class=filter-tab data-filter=pinned onclick=setFilter('pinned')>Pinned</button>
+      <button class=filter-tab data-filter=archived onclick=setFilter('archived')>Archive</button>
+    </div>
+  </div>
+
+  <!-- Tag Badges -->
+  <div id=tag-cloud class=tags-cloud></div>
+
+  <!-- Links List -->
+  <div id=links-container class=link-list>
+    <div class=empty-state>Loading your links...</div>
+  </div>
+</div>
+
+<div id=notification class=notification hidden></div>
+
+<script>
+let currentUser = null;
+let currentLinks = [];
+let activeTag = null;
+let activeFilter = 'all';
+let editingLinkId = null;
+
+function notify(msg, isErr) {
+  const el = document.getElementById('notification');
+  el.textContent = msg;
+  el.style.borderColor = isErr ? 'var(--danger)' : 'var(--border)';
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 3500);
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault();
+    document.getElementById('search-input').focus();
+  }
+});
+
+function bufferToBase64URL(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let str = '';
+  for (let i = 0; i < bytes.length; i++) {
+    str += String.fromCharCode(bytes[i]);
+  }
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function base64URLToBuffer(base64url) {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = base64.length % 4;
+  const padded = pad ? base64 + '='.repeat(4 - pad) : base64;
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      showApp();
+    } else {
+      showAuth();
+    }
+  } catch (err) {
+    showAuth();
+  }
+}
+
+function showAuth() {
+  document.getElementById('view-auth').classList.remove('hidden');
+  document.getElementById('view-app').classList.add('hidden');
+  document.getElementById('app-header').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('view-auth').classList.add('hidden');
+  document.getElementById('view-app').classList.remove('hidden');
+  document.getElementById('app-header').classList.remove('hidden');
+  document.getElementById('user-display').textContent = '@' + currentUser.username;
+  loadLinks();
+}
+
+async function registerPasskey() {
+  const username = document.getElementById('username').value.trim();
+  const status = document.getElementById('auth-status');
+  if (!username) { status.textContent = 'Please enter a username.'; return; }
+  status.textContent = 'Requesting registration challenge...';
+
+  try {
+    const optRes = await fetch('/api/auth/register-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    if (!optRes.ok) throw new Error(await optRes.text());
+    const options = await optRes.json();
+
+    status.textContent = 'Prompting Proton Pass / Passkey authenticator...';
+    let attResp;
+
+    if (window.SimpleWebAuthnBrowser && window.SimpleWebAuthnBrowser.startRegistration) {
+      attResp = await window.SimpleWebAuthnBrowser.startRegistration(options);
+    } else {
+      options.challenge = base64URLToBuffer(options.challenge);
+      options.user.id = base64URLToBuffer(options.user.id);
+      if (options.excludeCredentials) {
+        options.excludeCredentials = options.excludeCredentials.map(c => ({
+          ...c,
+          id: base64URLToBuffer(c.id)
+        }));
+      }
+      const credential = await navigator.credentials.create({ publicKey: options });
+      attResp = {
+        id: credential.id,
+        rawId: bufferToBase64URL(credential.rawId),
+        type: credential.type,
+        response: {
+          attestationObject: bufferToBase64URL(credential.response.attestationObject),
+          clientDataJSON: bufferToBase64URL(credential.response.clientDataJSON),
+          transports: credential.response.getTransports ? credential.response.getTransports() : []
+        }
+      };
+    }
+
+    status.textContent = 'Verifying passkey registration...';
+    const verifyRes = await fetch('/api/auth/register-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(attResp)
+    });
+
+    const verifyData = await verifyRes.json();
+    if (!verifyRes.ok) throw new Error(verifyData.error || 'Verification failed');
+    notify('Passkey registered successfully!');
+    status.textContent = '';
+    await checkAuth();
+  } catch (err) {
+    console.error('Registration error:', err);
+    status.textContent = 'Error: ' + err.message;
+  }
+}
+
+async function loginPasskey() {
+  const username = document.getElementById('username').value.trim();
+  const status = document.getElementById('auth-status');
+  status.textContent = 'Requesting login options...';
+
+  try {
+    const optRes = await fetch('/api/auth/login-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username || undefined })
+    });
+    if (!optRes.ok) throw new Error(await optRes.text());
+    const options = await optRes.json();
+
+    status.textContent = 'Authenticate with Proton Pass / Passkey...';
+    let asseResp;
+
+    if (window.SimpleWebAuthnBrowser && window.SimpleWebAuthnBrowser.startAuthentication) {
+      asseResp = await window.SimpleWebAuthnBrowser.startAuthentication(options);
+    } else {
+      options.challenge = base64URLToBuffer(options.challenge);
+      if (options.allowCredentials) {
+        options.allowCredentials = options.allowCredentials.map(c => ({
+          ...c,
+          id: base64URLToBuffer(c.id)
+        }));
+      }
+      const assertion = await navigator.credentials.get({ publicKey: options });
+      asseResp = {
+        id: assertion.id,
+        rawId: bufferToBase64URL(assertion.rawId),
+        type: assertion.type,
+        response: {
+          authenticatorData: bufferToBase64URL(assertion.response.authenticatorData),
+          clientDataJSON: bufferToBase64URL(assertion.response.clientDataJSON),
+          signature: bufferToBase64URL(assertion.response.signature),
+          userHandle: assertion.response.userHandle ? bufferToBase64URL(assertion.response.userHandle) : null
+        }
+      };
+    }
+
+    status.textContent = 'Verifying login...';
+    const verifyRes = await fetch('/api/auth/login-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(asseResp)
+    });
+
+    const verifyData = await verifyRes.json();
+    if (!verifyRes.ok) throw new Error(verifyData.error || 'Login verification failed');
+    notify('Logged in with passkey!');
+    status.textContent = '';
+    await checkAuth();
+  } catch (err) {
+    console.error('Login error:', err);
+    status.textContent = 'Login failed: ' + err.message;
+  }
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  currentUser = null;
+  showAuth();
+}
+
+async function loadLinks() {
+  try {
+    const res = await fetch('/api/links');
+    if (res.ok) {
+      currentLinks = await res.json();
+      renderTags();
+      renderLinks();
+    }
+  } catch (err) {
+    notify('Failed to load links', true);
+  }
+}
+
+function renderTags() {
+  const tagCounts = {};
+  currentLinks.forEach(l => {
+    if (!l.tags) return;
+    l.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
+      tagCounts[t] = (tagCounts[t] || 0) + 1;
+    });
+  });
+
+  const container = document.getElementById('tag-cloud');
+  const tags = Object.keys(tagCounts).sort();
+  if (tags.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = tags.map(t =>
+    '<span class=tag-badge ' + (activeTag === t ? 'active' : '') + ' onclick=filterByTag(\'' + t + '\')>#' + t + ' (' + tagCounts[t] + ')</span>'
+  ).join('');
+}
+
+function filterByTag(tag) {
+  activeTag = (activeTag === tag) ? null : tag;
+  renderTags();
+  renderLinks();
+}
+
+function setFilter(type) {
+  activeFilter = type;
+  document.querySelectorAll('.filter-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === type);
+  });
+  renderLinks();
+}
+
+function handleSearch() {
+  renderLinks();
+}
+
+function renderLinks() {
+  const query = (document.getElementById('search-input').value || '').toLowerCase().trim();
+  const container = document.getElementById('links-container');
+
+  let filtered = currentLinks.filter(l => {
+    if (activeFilter === 'pinned' && !l.is_pinned) return false;
+    if (activeFilter === 'archived' && !l.is_archived) return false;
+    if (activeFilter === 'all' && l.is_archived) return false;
+
+    if (activeTag) {
+      const linkTags = (l.tags || '').split(',').map(t => t.trim().toLowerCase());
+      if (!linkTags.includes(activeTag.toLowerCase())) return false;
+    }
+
+    if (query) {
+      const match = (l.title || '').toLowerCase().includes(query) ||
+                    (l.url || '').toLowerCase().includes(query) ||
+                    (l.tags || '').toLowerCase().includes(query) ||
+                    (l.description || '').toLowerCase().includes(query);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return b.is_pinned - a.is_pinned;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class=empty-state>No links found. Add your first link above!</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(link => {
+    const escTitle = escapeHtml(link.title || link.url);
+    const escUrl = escapeHtml(link.url);
+    const escDesc = link.description ? '<div class=link-desc>' + escapeHtml(link.description) + '</div>' : '';
+    const pinIcon = link.is_pinned ? '<span style=color:var(--pin); font-size:12px;>📌</span>' : '';
+    const tagBadges = (link.tags || '').split(',').map(t => t.trim()).filter(Boolean).map(t =>
+      '<span class=tag-badge onclick=filterByTag(\'' + escapeHtml(t) + '\')>#' + escapeHtml(t) + '</span>'
+    ).join('');
+
+    return '<div class=link-item ' + (link.is_pinned ? 'pinned' : '') + ' id=link-' + link.id + '>' +
+      '<div class=link-header>' +
+        '<div>' +
+          '<div class=link-title-group>' +
+            '<a class=link-title href=/r/' + link.id + ' target=_blank rel=noopener>' + escTitle + '</a>' +
+            pinIcon +
+          '</div>' +
+          '<div class=link-url>' + escUrl + '</div>' +
+        '</div>' +
+        '<div class=link-actions>' +
+          '<button class=action-icon-btn ' + (link.is_pinned ? 'pinned' : '') + ' onclick=togglePin(\'' + link.id + '\', ' + (link.is_pinned ? 0 : 1) + ') title=Pin>📌</button>' +
+          '<button class=action-icon-btn onclick=copyLinkUrl(\'' + escUrl + '\') title=Copy URL>📋</button>' +
+          '<button class=action-icon-btn onclick=editLink(\'' + link.id + '\') title=Edit>✏️</button>' +
+          '<button class=action-icon-btn onclick=toggleArchive(\'' + link.id + '\', ' + (link.is_archived ? 0 : 1) + ') title=Archive>📦</button>' +
+          '<button class=action-icon-btn danger onclick=deleteLink(\'' + link.id + '\') title=Delete>🗑️</button>' +
+        '</div>' +
+      '</div>' +
+      escDesc +
+      '<div class=link-meta>' +
+        '<div style=display:flex; gap:4px; align-items:center;>' + tagBadges + '</div>' +
+        '<div>' +
+          '<span class=click-badge>' + (link.click_count || 0) + ' clicks</span> • ' +
+          '<span>' + formatDate(link.created_at) + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function copyLinkUrl(url) {
+  navigator.clipboard.writeText(url);
+  notify('Copied to clipboard: ' + url);
+}
+
+async function saveLink(e) {
+  e.preventDefault();
+  const url = document.getElementById('link-url').value.trim();
+  const title = document.getElementById('link-title').value.trim();
+  const tags = document.getElementById('link-tags').value.trim();
+
+  if (!url) return;
+
+  if (editingLinkId) {
+    const res = await fetch('/api/links/' + editingLinkId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, title, tags })
+    });
+    if (res.ok) {
+      notify('Link updated');
+      cancelEdit();
+      loadLinks();
+    } else {
+      notify('Failed to update', true);
+    }
+  } else {
+    const res = await fetch('/api/links', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, title, tags })
+    });
+    if (res.ok) {
+      notify('Link saved');
+      document.getElementById('link-form').reset();
+      loadLinks();
+    } else {
+      notify('Failed to save link', true);
+    }
+  }
+}
+
+function editLink(id) {
+  const link = currentLinks.find(l => l.id === id);
+  if (!link) return;
+  editingLinkId = id;
+  document.getElementById('link-url').value = link.url;
+  document.getElementById('link-title').value = link.title;
+  document.getElementById('link-tags').value = link.tags || '';
+  document.getElementById('btn-save-link').textContent = 'Update Link';
+  document.getElementById('edit-id').textContent = link.title || link.url;
+  document.getElementById('edit-indicator').classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  editingLinkId = null;
+  document.getElementById('link-form').reset();
+  document.getElementById('btn-save-link').textContent = '+ Add Link';
+  document.getElementById('edit-indicator').classList.add('hidden');
+}
+
+async function togglePin(id, is_pinned) {
+  await fetch('/api/links/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_pinned })
+  });
+  loadLinks();
+}
+
+async function toggleArchive(id, is_archived) {
+  await fetch('/api/links/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_archived })
+  });
+  loadLinks();
+}
+
+async function deleteLink(id) {
+  if (!confirm('Are you sure you want to delete this link?')) return;
+  const res = await fetch('/api/links/' + id, { method: 'DELETE' });
+  if (res.ok) {
+    notify('Link deleted');
+    loadLinks();
+  }
+}
+
+function exportLinks() {
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(currentLinks, null, 2));
+  const a = document.createElement('a');
+  a.setAttribute('href', dataStr);
+  a.setAttribute('download', 'linager-links-' + new Date().toISOString().slice(0,10) + '.json');
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+checkAuth();
+</script>
+</body>
+</html>

@@ -154,6 +154,80 @@ function jsonResponse(data: any, status = 200, headers: HeadersInit = {}): Respo
   });
 }
 
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, "/")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchUrlTitle(targetUrl: string): Promise<string> {
+  let parsed: URL;
+  try {
+    parsed = new URL(targetUrl);
+  } catch {
+    return targetUrl;
+  }
+
+  // 1. YouTube fast oEmbed handler
+  if (parsed.hostname.includes("youtube.com") || parsed.hostname === "youtu.be") {
+    try {
+      const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(targetUrl)}&format=json`;
+      const res = await fetch(oembedUrl, {
+        headers: { "User-Agent": "Linager/1.0" },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        const data = await res.json() as { title?: string };
+        if (data.title) return data.title.trim();
+      }
+    } catch (e) {
+      console.warn("YouTube oEmbed failed, falling back to html:", e);
+    }
+  }
+
+  // 2. Generic webpage fetch with title / og:title extraction
+  try {
+    const res = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 LinagerBot/1.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (res.ok) {
+      const text = await res.text();
+
+      // Check og:title first
+      const ogMatch = text.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
+                      text.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
+      if (ogMatch && ogMatch[1]) {
+        const cleanOg = decodeHtmlEntities(ogMatch[1]);
+        if (cleanOg) return cleanOg;
+      }
+
+      // Check standard <title> tag
+      const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        const cleanTitle = decodeHtmlEntities(titleMatch[1]);
+        if (cleanTitle) return cleanTitle;
+      }
+    }
+  } catch (e) {
+    console.warn("Generic page fetch failed:", e);
+  }
+
+  return parsed.hostname;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -467,7 +541,21 @@ export default {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    // 9. Links: List All
+    // 9. Metadata: Auto-fetch page title from URL
+    if (url.pathname === "/api/metadata/fetch" && request.method === "POST") {
+      try {
+        const body = await request.json() as { url?: string };
+        const rawUrl = (body.url || "").trim();
+        if (!rawUrl) return jsonResponse({ error: "URL is required" }, 400);
+
+        const title = await fetchUrlTitle(rawUrl);
+        return jsonResponse({ title });
+      } catch (err: any) {
+        return jsonResponse({ error: err.message || "Failed to fetch metadata" }, 500);
+      }
+    }
+
+    // 10. Links: List All
     if (url.pathname === "/api/links" && request.method === "GET") {
       const res = await db.execute({
         sql: "SELECT * FROM links WHERE user_id = ? ORDER BY is_pinned DESC, created_at DESC",
@@ -476,7 +564,7 @@ export default {
       return jsonResponse(res.rows);
     }
 
-    // 10. Links: Create
+    // 11. Links: Create
     if (url.pathname === "/api/links" && request.method === "POST") {
       try {
         const body = await request.json() as { url: string; title?: string; description?: string; tags?: string };
@@ -484,11 +572,7 @@ export default {
 
         let title = (body.title || "").trim();
         if (!title) {
-          try {
-            title = new URL(body.url).hostname;
-          } catch {
-            title = body.url;
-          }
+          title = await fetchUrlTitle(body.url);
         }
 
         const id = crypto.randomUUID().slice(0, 8);

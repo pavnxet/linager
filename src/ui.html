@@ -851,6 +851,49 @@ function cancelEdit() {
   document.getElementById('edit-indicator').classList.add('hidden');
 }
 
+let isFetchingTitle = false;
+async function autoFetchTitle() {
+  const urlInput = document.getElementById('link-url');
+  const titleInput = document.getElementById('link-title');
+  const url = (urlInput.value || '').trim();
+
+  // Only auto-fetch if valid URL and title input is currently empty
+  if (!url || !url.startsWith('http')) return;
+  if (titleInput.value.trim().length > 0) return;
+
+  try {
+    isFetchingTitle = true;
+    titleInput.placeholder = 'Fetching title... ⏳';
+    
+    const res = await fetch('/api/metadata/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      // Only set if user hasn't typed anything in the meantime
+      if (data.title && !titleInput.value.trim()) {
+        titleInput.value = data.title;
+      }
+    }
+  } catch (err) {
+    console.warn('Auto-title fetch failed:', err);
+  } finally {
+    isFetchingTitle = false;
+    titleInput.placeholder = 'Title (optional, auto-detected)';
+  }
+}
+
+// Attach paste & blur listeners to URL input
+const urlInputField = document.getElementById('link-url');
+urlInputField.addEventListener('paste', () => {
+  setTimeout(autoFetchTitle, 50);
+});
+urlInputField.addEventListener('change', autoFetchTitle);
+
+
 async function togglePin(id, is_pinned) {
   await fetch('/api/links/' + id, {
     method: 'PUT',

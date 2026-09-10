@@ -555,8 +555,13 @@ export default {
       }
     }
 
-    // 10. Links: List All
+    // 10. Links: List All (auto-archives unpinned links > 15 days for instant load)
     if (url.pathname === "/api/links" && request.method === "GET") {
+      await db.execute({
+        sql: "UPDATE links SET is_archived = 1 WHERE user_id = ? AND is_archived = 0 AND is_pinned = 0 AND created_at < datetime('now', '-15 days')",
+        args: [session.userId],
+      });
+
       const res = await db.execute({
         sql: "SELECT * FROM links WHERE user_id = ? ORDER BY is_pinned DESC, created_at DESC",
         args: [session.userId],

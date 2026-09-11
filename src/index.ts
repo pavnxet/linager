@@ -149,6 +149,9 @@ function jsonResponse(data: any, status = 200, headers: HeadersInit = {}): Respo
     status,
     headers: {
       "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
       ...headers,
     },
   });
@@ -231,10 +234,29 @@ async function fetchUrlTitle(targetUrl: string): Promise<string> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // Handle CORS preflight OPTIONS request
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
     const secret = (env.TURSO_AUTH_TOKEN || "linager-default-edge-secret").slice(0, 32);
     const db = getDb(env);
     const cookies = parseCookies(request.headers.get("Cookie"));
-    const session = await verifySessionToken(cookies["linager_session"], secret);
+    
+    // Support either cookie or Authorization: Bearer <token>
+    const authHeader = request.headers.get("Authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
+    const sessionToken = bearerToken || cookies["linager_session"];
+    const session = await verifySessionToken(sessionToken, secret);
 
     // 1. Single-Page Link Manager UI
     if (url.pathname === "/" && request.method === "GET") {
@@ -247,6 +269,13 @@ export default {
     if (url.pathname === "/api/auth/me" && request.method === "GET") {
       if (!session) return jsonResponse({ error: "Unauthorized" }, 401);
       return jsonResponse({ user: session });
+    }
+
+    // 2b. Auth: Get / Generate Extension API Token for current user
+    if (url.pathname === "/api/auth/token" && request.method === "GET") {
+      if (!session) return jsonResponse({ error: "Unauthorized" }, 401);
+      const token = await createSessionToken(session.userId, session.username, secret);
+      return jsonResponse({ token, username: session.username });
     }
 
     // 3. Auth: Registration Options

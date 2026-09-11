@@ -1,0 +1,88 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Save to Linager</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <span>🔗</span> Linager
+      </div>
+      <div class="header-actions">
+        <a href="#" id="btn-settings" title="Configure Token / Server" class="icon-btn">⚙️</a>
+        <a href="https://linager.pavneet1804.workers.dev/" target="_blank" title="Open Linager Web Hub" class="icon-btn">↗</a>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div id="status-banner" class="status-banner hidden"></div>
+
+    <!-- Main Form View -->
+    <div id="view-main">
+      <form id="save-form">
+        <div class="form-group">
+          <label for="link-title">Title</label>
+          <input type="text" id="link-title" placeholder="Fetching title..." required />
+        </div>
+
+        <div class="form-group">
+          <label for="link-url">URL</label>
+          <input type="url" id="link-url" placeholder="https://..." required />
+        </div>
+
+        <div class="form-group">
+          <label for="link-tags">Tags <span class="sub">(comma separated)</span></label>
+          <input type="text" id="link-tags" placeholder="e.g. dev, youtube, study" />
+        </div>
+
+        <div class="form-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="link-pin" />
+            <span>📌 Pin to top</span>
+          </label>
+        </div>
+
+        <button type="submit" id="btn-save" class="btn-primary">
+          <span id="btn-text">Save to Linager</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Settings View (Token setup) -->
+    <div id="view-settings" class="hidden">
+      <div class="settings-box">
+        <h3>Connect to Linager</h3>
+        <p class="hint">Copy your Extension Key from your Linager dashboard (click <strong>🧩 Extension Key</strong> in the header).</p>
+        
+        <div class="form-group">
+          <label for="api-token">Extension API Token</label>
+          <input type="password" id="api-token" placeholder="Paste token here..." />
+        </div>
+
+        <div class="form-group">
+          <label for="api-url">Linager Endpoint</label>
+          <input type="text" id="api-url" value="https://linager.pavneet1804.workers.dev" />
+        </div>
+
+        <div class="settings-actions">
+          <button type="button" id="btn-save-settings" class="btn-primary">Save & Connect</button>
+          <button type="button" id="btn-cancel-settings" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span id="user-info" class="user-info">Checking connection...</span>
+      <span class="shortcut-hint">Alt+Shift+S (Quick save)</span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

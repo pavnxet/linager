@@ -397,6 +397,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   </div>
   <div class=user-bar>
     <span id=user-display style=color:var(--text-muted); font-size:12px;></span>
+    <button id=btn-ext-token onclick=copyExtensionToken() title="Get API Token for Chrome Extension">🧩 Extension Key</button>
     <button id=btn-export onclick=exportLinks()>Export</button>
     <button id=btn-logout onclick=logout()>Logout</button>
   </div>
@@ -929,6 +930,25 @@ function exportLinks() {
   document.body.appendChild(a);
   a.click();
   a.remove();
+}
+
+async function copyExtensionToken() {
+  try {
+    const res = await fetch('/api/auth/token');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) {
+        await navigator.clipboard.writeText(data.token);
+        notify('Extension token copied to clipboard! Paste it in extension settings.');
+      } else {
+        notify('Failed to generate token', true);
+      }
+    } else {
+      notify('Please login again to copy token', true);
+    }
+  } catch (err) {
+    notify('Failed to copy token: ' + err.message, true);
+  }
 }
 
 checkAuth();

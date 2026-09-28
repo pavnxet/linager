@@ -548,7 +548,7 @@ export default {
     }
 
     // 8. Public Redirect: /r/:id (with atomic click counter)
-    if (url.pathname.startsWith("/r/") && request.method === "GET") {
+    if (url.pathname.startsWith("/r/") && (request.method === "GET" || request.method === "HEAD")) {
       const linkId = url.pathname.slice(3);
       const res = await db.execute({
         sql: "SELECT url FROM links WHERE id = ? LIMIT 1",
@@ -557,10 +557,16 @@ export default {
       if (res.rows.length === 0) {
         return new Response("Link not found", { status: 404 });
       }
-      db.execute({
-        sql: "UPDATE links SET click_count = click_count + 1 WHERE id = ?",
-        args: [linkId],
-      }).catch(console.error);
+      if (request.method === "GET") {
+        try {
+          await db.execute({
+            sql: "UPDATE links SET click_count = COALESCE(click_count, 0) + 1 WHERE id = ?",
+            args: [linkId],
+          });
+        } catch (err) {
+          console.error("Failed to increment click count:", err);
+        }
+      }
 
       return Response.redirect(res.rows[0].url as string, 302);
     }

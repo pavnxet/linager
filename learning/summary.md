@@ -34,3 +34,14 @@
 - Updated `src/index.ts` to strictly sanitize `is_pinned` and `is_archived` to integer `0` or `1` during `PUT /api/links/:id` and support optional `is_pinned` upon creation in `POST /api/links`.
 - Recompiled `src/html-template.ts`, ran `npx tsc --noEmit` (clean check), and deployed live to Cloudflare Workers (`https://linager.pavneet1804.workers.dev`, Version ID `509dd350-fef9-4d4a-a6bf-dd3f2e67ec65`).
 
+## Session: 2026-09-28 - Fix Click Count Tracking
+- Diagnosed why link click counts were not incrementing:
+  1. In `src/index.ts`, `db.execute({ sql: "UPDATE links SET click_count = click_count + 1 WHERE id = ?" })` inside `/r/:id` was unawaited. Cloudflare Worker runtime terminated the isolate immediately upon returning `Response.redirect()`, canceling the Turso write query before completion.
+  2. In SQLite, `NULL + 1` evaluates to `NULL` if `click_count` was uninitialized.
+  3. In `src/ui.html`, clicking a link opened `/r/:id` in a new tab, but the dashboard badge remained static at `0 clicks` without an optimistic update or tab visibility synchronization. The URL text below the title was also an unclickable `<div>`.
+- Fixed backend `/r/:id` handler to `await db.execute` with `COALESCE(click_count, 0) + 1` and supported both GET and HEAD requests.
+- Made both title and URL clickable anchors with `onclick="recordClick('${link.id}')"`, styled `.link-url` cleanly in CSS, and updated the badge in real-time.
+- Added `visibilitychange` listener on the dashboard so data automatically refreshes from the edge when the user navigates back to the tab.
+- Recompiled `src/html-template.ts`, verified TypeScript compilation, and deployed live to Cloudflare Workers (`https://linager.pavneet1804.workers.dev`, Version ID `c5178dd1-1bf3-43bf-9a02-168e620659de`). Verified HTTP 404 on nonexistent link via `curl -I`.
+
+

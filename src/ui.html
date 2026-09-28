@@ -218,6 +218,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 550px;
+  text-decoration: none;
+  display: inline-block;
+}
+.link-url:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 .link-desc {
   color: var(--text);
@@ -858,10 +864,10 @@ function renderLinks() {
       '<div class="link-header">' +
         '<div>' +
           '<div class="link-title-group">' +
-            '<a class="link-title" href="/r/' + link.id + '" target="_blank" rel="noopener">' + escTitle + '</a>' +
+            '<a class="link-title" href="/r/' + link.id + '" target="_blank" rel="noopener" onclick="recordClick(\'' + link.id + '\')">' + escTitle + '</a>' +
             pinIcon +
           '</div>' +
-          '<div class="link-url">' + escUrl + '</div>' +
+          '<a class="link-url" href="/r/' + link.id + '" target="_blank" rel="noopener" onclick="recordClick(\'' + link.id + '\')">' + escUrl + '</a>' +
         '</div>' +
         '<div class="link-actions">' +
           '<button class="action-icon-btn ' + (isPinned ? 'pinned' : '') + '" onclick="togglePin(\'' + link.id + '\', ' + (isPinned ? 0 : 1) + ')" title="' + (isPinned ? 'Unpin' : 'Pin') + '">📌</button>' +
@@ -875,7 +881,7 @@ function renderLinks() {
       '<div class="link-meta">' +
         '<div style="display:flex; gap:4px; align-items:center;">' + tagBadges + '</div>' +
         '<div>' +
-          '<span class="click-badge">' + (link.click_count || 0) + ' clicks</span> • ' +
+          '<span class="click-badge" id="clicks-' + link.id + '">' + (link.click_count || 0) + ' clicks</span> • ' +
           '<span>' + formatDate(link.created_at) + '</span>' +
         '</div>' +
       '</div>' +
@@ -1108,7 +1114,20 @@ async function copyModalToken() {
   } catch (e) {
     prompt('Copy your extension key below:', currentExtensionToken);
   }
+function recordClick(id) {
+  const link = currentLinks.find(l => l.id === id);
+  if (link) {
+    link.click_count = (Number(link.click_count) || 0) + 1;
+    const badge = document.getElementById('clicks-' + id);
+    if (badge) badge.textContent = link.click_count + ' clicks';
+  }
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentUser) {
+    loadLinks();
+  }
+});
 
 checkAuth();
 </script>

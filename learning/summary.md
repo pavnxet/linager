@@ -44,4 +44,12 @@
 - Added `visibilitychange` listener on the dashboard so data automatically refreshes from the edge when the user navigates back to the tab.
 - Recompiled `src/html-template.ts`, verified TypeScript compilation, and deployed live to Cloudflare Workers (`https://linager.pavneet1804.workers.dev`, Version ID `c5178dd1-1bf3-43bf-9a02-168e620659de`). Verified HTTP 404 on nonexistent link via `curl -I`.
 
+## Session: 2026-09-28 - Fix `loginPasskey is not defined` ReferenceError
+- Investigated `Uncaught ReferenceError: loginPasskey is not defined at HTMLButtonElement.onclick ((index):501:88)`.
+- Discovered root cause: the closing brace `}` on `copyModalToken()` in `src/ui.html` was missing, causing `SyntaxError: Unexpected end of input` during script tag parsing. The parser failure prevented all top-level functions (`loginPasskey`, `registerPasskey`, `checkAuth`) from being registered on the window scope.
+- Restored closing brace `}` on `copyModalToken()` in `src/ui.html`.
+- Implemented automated Node.js `vm.Script` syntax validation to verify clean script parsing.
+- Recompiled `src/html-template.ts`, verified `npx tsc --noEmit` clean pass, and deployed live to Cloudflare Workers (`https://linager.pavneet1804.workers.dev`, Version ID `69b7b600-6f01-4cf0-9a54-8358c86ae05b`).
+
+
 

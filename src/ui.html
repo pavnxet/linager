@@ -1114,6 +1114,8 @@ async function copyModalToken() {
   } catch (e) {
     prompt('Copy your extension key below:', currentExtensionToken);
   }
+}
+
 function recordClick(id) {
   const link = currentLinks.find(l => l.id === id);
   if (link) {

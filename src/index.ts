@@ -610,9 +610,10 @@ export default {
         }
 
         const id = crypto.randomUUID().slice(0, 8);
+        const isPinned = (body as any).is_pinned ? 1 : 0;
         await db.execute({
-          sql: "INSERT INTO links (id, user_id, url, title, description, tags) VALUES (?, ?, ?, ?, ?, ?)",
-          args: [id, session.userId, body.url, title, body.description || "", body.tags || ""],
+          sql: "INSERT INTO links (id, user_id, url, title, description, tags, is_pinned) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          args: [id, session.userId, body.url, title, body.description || "", body.tags || "", isPinned],
         });
 
         return jsonResponse({ success: true, id, title }, 201);
@@ -634,8 +635,16 @@ export default {
       if (body.url !== undefined) { fields.push("url = ?"); args.push(body.url); }
       if (body.description !== undefined) { fields.push("description = ?"); args.push(body.description); }
       if (body.tags !== undefined) { fields.push("tags = ?"); args.push(body.tags); }
-      if (body.is_pinned !== undefined) { fields.push("is_pinned = ?"); args.push(body.is_pinned ? 1 : 0); }
-      if (body.is_archived !== undefined) { fields.push("is_archived = ?"); args.push(body.is_archived ? 1 : 0); }
+      if (body.is_pinned !== undefined) {
+        const pinVal = (body.is_pinned === 1 || body.is_pinned === true || body.is_pinned === "1") ? 1 : 0;
+        fields.push("is_pinned = ?");
+        args.push(pinVal);
+      }
+      if (body.is_archived !== undefined) {
+        const archVal = (body.is_archived === 1 || body.is_archived === true || body.is_archived === "1") ? 1 : 0;
+        fields.push("is_archived = ?");
+        args.push(archVal);
+      }
 
       if (fields.length === 0) return jsonResponse({ error: "No fields to update" }, 400);
 

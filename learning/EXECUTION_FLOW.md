@@ -1,4 +1,4 @@
-﻿# Linager Execution Flow
+# Linager Execution Flow
 
 ## Overview
 1. **Request arrives at Cloudflare Worker src/index.ts (etch handler)**.
@@ -15,3 +15,8 @@
    - PUT /api/links/:id: Updates link details (pin, archive, tags, title, url).
    - DELETE /api/links/:id: Deletes link.
    - GET /r/:id: Public/authenticated redirect that increments click count and redirects to destination URL.
+
+## Recent Changes (2026-09-28)
+- **Pin / Archive Quoting Fix (`src/ui.html`)**: Wrapped `onclick`, `class`, and `title` attributes in quotes to fix JavaScript syntax error from whitespace splitting.
+- **Data Normalization (`src/index.ts` & `src/ui.html`)**: Sanitized `is_pinned` and `is_archived` to integer values (`0` or `1`) on link creation and update.
+- **Toast Notifications**: Added explicit notifications when links are pinned, unpinned, archived, or unarchived.

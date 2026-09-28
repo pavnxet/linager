@@ -25,3 +25,12 @@
 - Added Automatic URL Title Fetching: Added `/api/metadata/fetch` edge endpoint supporting YouTube fast oEmbed resolution and generic web page `<title>` / `og:title` extraction with HTML entity decoding. Added frontend paste & change listeners in `src/ui.html` to auto-populate the Title input while preserving manual edits and showing subtle loading placeholder. Deployed live to `https://linager.pavneet1804.workers.dev` (Version ID `9d2e9618`).
 - Added 15-Day Auto-Archive (Ponytail): Single native SQLite UPDATE query on `GET /api/links` automatically moves unpinned links older than 15 days (`created_at < datetime('now', '-15 days')`) into `is_archived = 1`. Keeps main list load instantaneous without background workers. Deployed live to `https://linager.pavneet1804.workers.dev` (Version ID `693c826b`).
 - Created 1-Click Chrome Extension (Manifest V3): Added CORS preflight + `Authorization: Bearer <token>` support and `/api/auth/token` endpoint to backend. Added "🧩 Extension Key" one-click token copy button to web UI. Built complete extension in `extension/` (`manifest.json`, `popup.html`, `popup.css`, `popup.js`, `background.js`, icons, `README.md`) supporting active tab auto-fill, optional tags & pin, right-click context menu ("Save page to Linager", "Save link to Linager"), and `Alt+Shift+S` quick save shortcut. Deployed live to Cloudflare (Version ID `ac920f52`).
+
+## Session: 2026-09-28 - Fix Pin / Unpin Functionality
+- Investigated user report of the Pin button not working on links.
+- Discovered root cause: in `src/ui.html`, HTML attributes `onclick` and `class` were unquoted in the template string (`onclick=togglePin('id', 0)`). The browser's HTML parser truncated the value at whitespace following the comma, resulting in an unclosed JS string and `Uncaught SyntaxError: Unexpected end of input`.
+- Fixed `renderLinks()` in `src/ui.html` by wrapping all `onclick`, `class`, and `title` attributes in quotes and standardizing `Number(link.is_pinned) === 1` checks.
+- Enhanced `togglePin` and `toggleArchive` with try/catch error handling and clear toast notifications (`notify('Link pinned 📌')`, `notify('Link unpinned')`).
+- Updated `src/index.ts` to strictly sanitize `is_pinned` and `is_archived` to integer `0` or `1` during `PUT /api/links/:id` and support optional `is_pinned` upon creation in `POST /api/links`.
+- Recompiled `src/html-template.ts`, ran `npx tsc --noEmit` (clean check), and deployed live to Cloudflare Workers (`https://linager.pavneet1804.workers.dev`, Version ID `509dd350-fef9-4d4a-a6bf-dd3f2e67ec65`).
+

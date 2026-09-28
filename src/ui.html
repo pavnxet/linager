@@ -809,9 +809,12 @@ function renderLinks() {
   const container = document.getElementById('links-container');
 
   let filtered = currentLinks.filter(l => {
-    if (activeFilter === 'pinned' && !l.is_pinned) return false;
-    if (activeFilter === 'archived' && !l.is_archived) return false;
-    if (activeFilter === 'all' && l.is_archived) return false;
+    const isPinned = Number(l.is_pinned) === 1;
+    const isArchived = Number(l.is_archived) === 1;
+
+    if (activeFilter === 'pinned' && !isPinned) return false;
+    if (activeFilter === 'archived' && !isArchived) return false;
+    if (activeFilter === 'all' && isArchived) return false;
 
     if (activeTag) {
       const linkTags = (l.tags || '').split(',').map(t => t.trim().toLowerCase());
@@ -829,7 +832,9 @@ function renderLinks() {
   });
 
   filtered.sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) return b.is_pinned - a.is_pinned;
+    const pinA = Number(a.is_pinned) === 1 ? 1 : 0;
+    const pinB = Number(b.is_pinned) === 1 ? 1 : 0;
+    if (pinA !== pinB) return pinB - pinA;
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
@@ -839,36 +844,38 @@ function renderLinks() {
   }
 
   container.innerHTML = filtered.map(link => {
+    const isPinned = Number(link.is_pinned) === 1;
+    const isArchived = Number(link.is_archived) === 1;
     const escTitle = escapeHtml(link.title || link.url);
     const escUrl = escapeHtml(link.url);
-    const escDesc = link.description ? '<div class=link-desc>' + escapeHtml(link.description) + '</div>' : '';
-    const pinIcon = link.is_pinned ? '<span style=color:var(--pin); font-size:12px;>📌</span>' : '';
+    const escDesc = link.description ? '<div class="link-desc">' + escapeHtml(link.description) + '</div>' : '';
+    const pinIcon = isPinned ? '<span style="color:var(--pin); font-size:12px;">📌</span>' : '';
     const tagBadges = (link.tags || '').split(',').map(t => t.trim()).filter(Boolean).map(t =>
-      '<span class=tag-badge onclick=filterByTag(\'' + escapeHtml(t) + '\')>#' + escapeHtml(t) + '</span>'
+      '<span class="tag-badge" onclick="filterByTag(\'' + escapeHtml(t) + '\')">#' + escapeHtml(t) + '</span>'
     ).join('');
 
-    return '<div class=link-item ' + (link.is_pinned ? 'pinned' : '') + ' id=link-' + link.id + '>' +
-      '<div class=link-header>' +
+    return '<div class="link-item ' + (isPinned ? 'pinned ' : '') + (isArchived ? 'archived' : '') + '" id="link-' + link.id + '">' +
+      '<div class="link-header">' +
         '<div>' +
-          '<div class=link-title-group>' +
-            '<a class=link-title href=/r/' + link.id + ' target=_blank rel=noopener>' + escTitle + '</a>' +
+          '<div class="link-title-group">' +
+            '<a class="link-title" href="/r/' + link.id + '" target="_blank" rel="noopener">' + escTitle + '</a>' +
             pinIcon +
           '</div>' +
-          '<div class=link-url>' + escUrl + '</div>' +
+          '<div class="link-url">' + escUrl + '</div>' +
         '</div>' +
-        '<div class=link-actions>' +
-          '<button class=action-icon-btn ' + (link.is_pinned ? 'pinned' : '') + ' onclick=togglePin(\'' + link.id + '\', ' + (link.is_pinned ? 0 : 1) + ') title=Pin>📌</button>' +
-          '<button class=action-icon-btn onclick=copyLinkUrl(\'' + escUrl + '\') title=Copy URL>📋</button>' +
-          '<button class=action-icon-btn onclick=editLink(\'' + link.id + '\') title=Edit>✏️</button>' +
-          '<button class=action-icon-btn onclick=toggleArchive(\'' + link.id + '\', ' + (link.is_archived ? 0 : 1) + ') title=Archive>📦</button>' +
-          '<button class=action-icon-btn danger onclick=deleteLink(\'' + link.id + '\') title=Delete>🗑️</button>' +
+        '<div class="link-actions">' +
+          '<button class="action-icon-btn ' + (isPinned ? 'pinned' : '') + '" onclick="togglePin(\'' + link.id + '\', ' + (isPinned ? 0 : 1) + ')" title="' + (isPinned ? 'Unpin' : 'Pin') + '">📌</button>' +
+          '<button class="action-icon-btn" onclick="copyLinkUrl(\'' + escUrl + '\')" title="Copy URL">📋</button>' +
+          '<button class="action-icon-btn" onclick="editLink(\'' + link.id + '\')" title="Edit">✏️</button>' +
+          '<button class="action-icon-btn ' + (isArchived ? 'archived' : '') + '" onclick="toggleArchive(\'' + link.id + '\', ' + (isArchived ? 0 : 1) + ')" title="' + (isArchived ? 'Unarchive' : 'Archive') + '">📦</button>' +
+          '<button class="action-icon-btn danger" onclick="deleteLink(\'' + link.id + '\')" title="Delete">🗑️</button>' +
         '</div>' +
       '</div>' +
       escDesc +
-      '<div class=link-meta>' +
-        '<div style=display:flex; gap:4px; align-items:center;>' + tagBadges + '</div>' +
+      '<div class="link-meta">' +
+        '<div style="display:flex; gap:4px; align-items:center;">' + tagBadges + '</div>' +
         '<div>' +
-          '<span class=click-badge>' + (link.click_count || 0) + ' clicks</span> • ' +
+          '<span class="click-badge">' + (link.click_count || 0) + ' clicks</span> • ' +
           '<span>' + formatDate(link.created_at) + '</span>' +
         '</div>' +
       '</div>' +
@@ -993,21 +1000,41 @@ urlInputField.addEventListener('change', autoFetchTitle);
 
 
 async function togglePin(id, is_pinned) {
-  await fetch('/api/links/' + id, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_pinned })
-  });
-  loadLinks();
+  try {
+    const res = await fetch('/api/links/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_pinned })
+    });
+    if (res.ok) {
+      notify(is_pinned ? 'Link pinned 📌' : 'Link unpinned');
+      loadLinks();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      notify(err.error || 'Failed to update pin', true);
+    }
+  } catch (err) {
+    notify('Network error updating pin', true);
+  }
 }
 
 async function toggleArchive(id, is_archived) {
-  await fetch('/api/links/' + id, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_archived })
-  });
-  loadLinks();
+  try {
+    const res = await fetch('/api/links/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_archived })
+    });
+    if (res.ok) {
+      notify(is_archived ? 'Link archived 📦' : 'Link unarchived');
+      loadLinks();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      notify(err.error || 'Failed to update archive', true);
+    }
+  } catch (err) {
+    notify('Network error updating archive', true);
+  }
 }
 
 async function deleteLink(id) {
